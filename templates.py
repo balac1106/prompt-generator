@@ -9,11 +9,12 @@ LEVELS = {
     "資深（有帶團隊或大型系統經驗）": "資深工程師"
 }
 
-CATEGORIES = ["除錯", "功能開發", "程式碼優化", "技術選型", "學習路線", "系統設計", "Code Review"]
+CATEGORIES = ["除錯", "功能開發", "程式碼優化", "技術選型", "學習路線", "系統設計", "Code Review", "SAP 開發"]
 
 LANGUAGES = [
     "Python", "JavaScript", "TypeScript", "Go", "Rust",
-    "Java", "C#", "C++", "Swift", "Kotlin", "PHP", "Ruby", "其他"
+    "Java", "C#", "C++", "Swift", "Kotlin", "PHP", "Ruby",
+    "ABAP", "其他"
 ]
 
 
@@ -161,6 +162,26 @@ def build_claude_prompt(level, language, category, task):
 
 <format>
 友善但誠實的語氣，讓對方知道如何進步。
+</format>""",
+
+        "SAP 開發": f"""<context>
+你是一位熟悉 SAP 生態（ABAP、模組、報表、增強、Fiori 等）的資深顧問，正在協助一位{level}進行 SAP 相關開發。
+請根據對方程度調整說明深度，必要時說明 SAP 術語與最佳實務。
+</context>
+
+<task>
+{task}
+</task>
+
+<instructions>
+1. 釐清需求對應的 SAP 模組或技術（如 MM、SD、FI、ABAP、S/4HANA 等）
+2. 說明實作思路與建議的開發方式（報表、增強、自訂程式、ODATA 等）
+3. 提供可參考的程式碼或步驟（若為 ABAP 請符合新語法與最佳實務）
+4. 提醒權限、傳輸、測試與上線注意事項
+</instructions>
+
+<format>
+請用繁體中文回答，程式碼與物件名稱用英文，說明清楚易懂。
 </format>"""
     }
     return templates.get(category, templates["功能開發"])
@@ -267,7 +288,20 @@ Step 4：如果有效能提升，量化說明
 程式碼：
 {task}
 
-語氣請友善，幫助對方學習而不是批評。"""
+語氣請友善，幫助對方學習而不是批評。""",
+
+        "SAP 開發": f"""你是一位熟悉 SAP（ABAP、各模組、報表、增強、Fiori）的資深顧問，請幫一位{level}完成 SAP 相關開發。
+
+請按照以下步驟回答：
+Step 1：確認需求對應的 SAP 模組或技術（MM、SD、FI、ABAP、S/4HANA 等）
+Step 2：說明建議的實作方式（報表、增強、自訂程式、ODATA 等）與整體步驟
+Step 3：提供可用的程式碼或操作步驟（ABAP 請符合新語法與最佳實務）
+Step 4：列出權限、傳輸、測試與上線的注意事項
+
+需求描述：
+{task}
+
+請用繁體中文說明，程式碼與物件名稱用英文，適合{level}的理解程度。"""
     }
     return templates.get(category, templates["功能開發"])
 
@@ -367,7 +401,20 @@ def build_gemini_prompt(level, language, category, task):
 - 修改後的程式碼
 - 學習建議
 
-語言：繁體中文，語氣友善"""
+語言：繁體中文，語氣友善""",
+
+        "SAP 開發": f"""角色：SAP 資深顧問（ABAP、模組、報表、增強、Fiori）
+對象：{level}
+任務：SAP 相關開發
+
+需求：{task}
+
+請提供：
+- 對應模組/技術與實作方式
+- 步驟或範例程式碼（ABAP 符合新語法）
+- 權限與傳輸注意事項
+
+語言：繁體中文，程式與物件名稱用英文"""
     }
     return templates.get(category, templates["功能開發"])
 
@@ -452,7 +499,18 @@ def build_grok_prompt(level, language, category, task):
 - 怎麼改？給我改好的版本
 - 我需要注意哪些編程習慣？
 
-繁體中文，說實話，我需要真正有幫助的回饋。"""
+繁體中文，說實話，我需要真正有幫助的回饋。""",
+
+        "SAP 開發": f"""我是做 SAP 的{level}，需要你幫我搞定一個開發需求。
+
+{task}
+
+直接給我：
+- 這需求大概對應哪個模組/技術，用什麼方式做比較好（報表、增強、自訂程式等）
+- 可以參考的步驟或 ABAP 程式碼（新語法、最佳實務）
+- 權限、傳輸、測試要注意什麼
+
+繁體中文，程式碼和物件名稱用英文，講重點、可執行。"""
     }
     return templates.get(category, templates["功能開發"])
 
