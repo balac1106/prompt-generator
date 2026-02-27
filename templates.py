@@ -17,8 +17,32 @@ LANGUAGES = [
     "ABAP", "其他"
 ]
 
+# 當使用者勾選「一併產生圖表/輔助文件」時，附加到各 AI 提示詞的指示
+DIAGRAM_EXTRA = """
+若適合此問題，請一併產出下列任一或數項，方便專案成員理解：
+- 時序圖（建議用 Mermaid sequenceDiagram 或文字描述）
+- 流程圖（Mermaid flowchart 或步驟圖）
+- 架構/元件關係說明（簡圖或條列）
+- 關鍵決策或狀態的簡短摘要
+可用 Mermaid 語法（多數 Wiki / 文件支援）或清晰文字描述。"""
 
-def build_claude_prompt(level, language, category, task):
+
+def _append_diagram_request(prompt_text, request_diagrams, style="claude"):
+    """依 request_diagrams 附加圖表/輔助文件請求。style 可為 claude / chatgpt / gemini / grok。"""
+    if not request_diagrams:
+        return prompt_text
+    if style == "claude":
+        return prompt_text.rstrip() + "\n\n<extra_output>\n" + DIAGRAM_EXTRA.strip() + "\n</extra_output>"
+    if style == "chatgpt":
+        return prompt_text.rstrip() + "\n\n若適合，請一併產出：時序圖、流程圖或架構說明（建議 Mermaid 或文字描述），方便團隊理解。"
+    if style == "gemini":
+        return prompt_text.rstrip() + "\n\n若適合，請加產：時序圖/流程圖/架構說明（Mermaid 或文字），利於專案成員理解。"
+    if style == "grok":
+        return prompt_text.rstrip() + "\n\n若適合，順便給時序圖、流程圖或架構說明（Mermaid 或文字），讓團隊好懂。"
+    return prompt_text.rstrip() + "\n\n" + DIAGRAM_EXTRA.strip()
+
+
+def build_claude_prompt(level, language, category, task, request_diagrams=False):
     """
     Claude 喜歡有結構、有脈絡的提示詞
     對 XML 標籤分區反應好
@@ -184,10 +208,11 @@ def build_claude_prompt(level, language, category, task):
 請用繁體中文回答，程式碼與物件名稱用英文，說明清楚易懂。
 </format>"""
     }
-    return templates.get(category, templates["功能開發"])
+    base = templates.get(category, templates["功能開發"])
+    return _append_diagram_request(base, request_diagrams, "claude")
 
 
-def build_chatgpt_prompt(level, language, category, task):
+def build_chatgpt_prompt(level, language, category, task, request_diagrams=False):
     """
     ChatGPT 對角色扮演設定反應強
     喜歡明確的 step-by-step 指令
@@ -303,10 +328,11 @@ Step 4：列出權限、傳輸、測試與上線的注意事項
 
 請用繁體中文說明，程式碼與物件名稱用英文，適合{level}的理解程度。"""
     }
-    return templates.get(category, templates["功能開發"])
+    base = templates.get(category, templates["功能開發"])
+    return _append_diagram_request(base, request_diagrams, "chatgpt")
 
 
-def build_gemini_prompt(level, language, category, task):
+def build_gemini_prompt(level, language, category, task, request_diagrams=False):
     """
     Gemini 喜歡簡潔直接的指令
     太長反而容易跑偏
@@ -416,10 +442,11 @@ def build_gemini_prompt(level, language, category, task):
 
 語言：繁體中文，程式與物件名稱用英文"""
     }
-    return templates.get(category, templates["功能開發"])
+    base = templates.get(category, templates["功能開發"])
+    return _append_diagram_request(base, request_diagrams, "gemini")
 
 
-def build_grok_prompt(level, language, category, task):
+def build_grok_prompt(level, language, category, task, request_diagrams=False):
     """
     Grok 喜歡直接、有觀點、對話感強的提示詞
     """
@@ -512,14 +539,15 @@ def build_grok_prompt(level, language, category, task):
 
 繁體中文，程式碼和物件名稱用英文，講重點、可執行。"""
     }
-    return templates.get(category, templates["功能開發"])
+    base = templates.get(category, templates["功能開發"])
+    return _append_diagram_request(base, request_diagrams, "grok")
 
 
-def generate_all_prompts(level, language, category, task):
+def generate_all_prompts(level, language, category, task, request_diagrams=False):
     level_label = LEVELS.get(level, level)
     return {
-        "Claude": build_claude_prompt(level_label, language, category, task),
-        "ChatGPT": build_chatgpt_prompt(level_label, language, category, task),
-        "Gemini": build_gemini_prompt(level_label, language, category, task),
-        "Grok": build_grok_prompt(level_label, language, category, task),
+        "Claude": build_claude_prompt(level_label, language, category, task, request_diagrams),
+        "ChatGPT": build_chatgpt_prompt(level_label, language, category, task, request_diagrams),
+        "Gemini": build_gemini_prompt(level_label, language, category, task, request_diagrams),
+        "Grok": build_grok_prompt(level_label, language, category, task, request_diagrams),
     }
